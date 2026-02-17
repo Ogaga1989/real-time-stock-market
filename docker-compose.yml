@@ -54,6 +54,12 @@ services:
   producer:
     build: ./producer
     container_name: producer
+    expose:
+      - "8000"
+    
+    # to access metrics from browser at http://localhost:8000/metrics use ports
+    #ports:
+    #  - "8000:8000"
     depends_on:
       - kafka
     restart: unless-stopped
@@ -81,5 +87,28 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       SPARK_CHECKPOINT: ${SPARK_CHECKPOINT}
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - producer
+    restart: unless-stopped
+    
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana  # <-- PERSIST DASHBOARDS HERE
+
 volumes:
   pgdata:
+  grafana_data:
