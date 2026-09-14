@@ -234,7 +234,7 @@ Prometheus scrapes metrics every 15 seconds. Grafana provides the operational da
 
 The final dashboard includes producer activity, API/Kafka errors, uptime, Kafka topic offset, latest stock prices, price trends, PostgreSQL connections and Spark CPU usage.
 
-![Grafana Real-Time Stock Market Monitoring dashboard](screenshots/grafana-dashboard.png)
+![Grafana Real-Time Stock Market Monitoring dashboard](screenshots/grafana dashboard.jpeg)
 
 One Kafka monitoring panel uses:
 
@@ -279,7 +279,7 @@ real-time-stock-market/
 │   └── prometheus.yml
 └── screenshots/
     ├── Pipeline_Dataflow_Architecture.png
-    ├── grafana-dashboard.png
+    ├── grafana dashboard.jpeg
     ├── kafka-ui-stock-ticks.png
     ├── postgres-stock-ticks.png
     └── postgres-stock-analytics.png

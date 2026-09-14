@@ -661,7 +661,7 @@ The repository uses a focused evidence set that demonstrates the main stages of 
 
 ### Observability
 
-- `grafana-dashboard.png` — completed Grafana monitoring dashboard.
+- `grafana dashboard.jpeg` — completed Grafana monitoring dashboard.
 
 Together these screenshots provide visual evidence for the architecture, Kafka transport, database persistence, analytical output and operational monitoring.
 
