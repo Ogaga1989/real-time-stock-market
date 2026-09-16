@@ -520,6 +520,117 @@ The project also contains real stock observations in the raw and analytical data
 
 ---
 
+## Power BI — Business Intelligence Dashboard
+
+Power BI Desktop was added as the business-intelligence and reporting layer for the PostgreSQL data produced by the streaming platform.
+
+The BI layer is intentionally separate from operational monitoring. Grafana remains the operational observability interface, while Power BI is used to present market observations and analytical outputs for business-facing analysis.
+
+### Power BI architecture
+
+```text
+Python Producer
+      |
+      v
+    Kafka
+      |
+      v
+Spark Structured Streaming
+      |
+      v
+  PostgreSQL
+   /      \\
+  /        \\
+raw data   one-minute analytics
+stock_ticks stock_analytics
+      \\
+       \\
+        v
+   Power BI Desktop
+```
+
+Power BI consumes the PostgreSQL tables:
+
+```text
+public.stock_ticks
+    - event_time
+    - ingest_ts
+    - price
+    - reported_volume
+    - source
+    - symbol
+
+public.stock_analytics
+    - avg_price
+    - ingest_ts
+    - latest_reported_volume
+    - max_price
+    - min_price
+    - symbol
+    - window_end
+    - window_start
+```
+
+### Power BI measures
+
+The dashboard uses DAX measures to avoid relying only on default visual aggregation:
+
+```DAX
+Latest Stock Price =
+VAR LatestTime =
+    MAX ( 'public stock_ticks'[event_time] )
+RETURN
+    CALCULATE (
+        MAX ( 'public stock_ticks'[price] ),
+        'public stock_ticks'[event_time] = LatestTime
+    )
+```
+
+Additional measures created for the dashboard include:
+
+- `Total Observations` — counts rows in `public stock_ticks`.
+- `Latest Observation Time` — returns the latest `event_time`.
+- `Latest AAPL Price` — returns the most recent AAPL observed price.
+- `Latest MSFT Price` — returns the most recent MSFT observed price.
+- `Latest TSLA Price` — returns the most recent TSLA observed price.
+
+### Dashboard visuals
+
+The captured dashboard contains:
+
+1. AAPL latest-price KPI.
+2. MSFT latest-price KPI.
+3. TSLA latest-price KPI.
+4. Total Observations KPI.
+5. Latest Observation timestamp card.
+6. Stock Price Trend using `event_time`, average `price`, and `symbol` from `public.stock_ticks`.
+7. One-Minute Average Price using `window_start`, `avg_price`, and `symbol` from `public.stock_analytics`.
+
+The stock trend and one-minute average charts use the underlying timestamp fields rather than a year/quarter/month/day hierarchy for the data field. Power BI may display readable date labels such as month names on the axis while still using the timestamp field underneath.
+
+### Captured Power BI evidence
+
+The screenshot below is the dashboard state captured after the PostgreSQL connection and core visuals were created. At capture time it showed 827 total observations, AAPL at $331.34, MSFT at 497.12 and TSLA at 365.44, alongside the latest-observation timestamp and the two time-series visuals.
+
+![Power BI Stock Market Intelligence Dashboard](screenshots/PowerBI_Dashboard.png)
+
+### Power BI design rationale
+
+The core streaming transformations remain in Spark. PostgreSQL provides the durable serving layer for analytics, and Power BI provides interactive business reporting.
+
+This keeps responsibilities separated:
+
+```text
+Spark
+ -> stream parsing, event-time handling, one-minute aggregation
+
+PostgreSQL
+ -> durable raw and analytical storage
+
+Power BI
+ -> KPI reporting, trend analysis and visual exploration
+```
+
 ## 16. Operational troubleshooting lessons
 
 ### 16.1 Kafka broker registration conflict
@@ -661,7 +772,8 @@ The repository uses a focused evidence set that demonstrates the main stages of 
 
 ### Observability
 
-- `grafana-dashboard.jpeg` — completed Grafana monitoring dashboard.
+- `grafana dashboard.jpeg` — completed Grafana monitoring dashboard.
+- `PowerBI_Dashboard.png` — captured Power BI business-intelligence dashboard using raw and one-minute analytical PostgreSQL data.
 
 Together these screenshots provide visual evidence for the architecture, Kafka transport, database persistence, analytical output and operational monitoring.
 

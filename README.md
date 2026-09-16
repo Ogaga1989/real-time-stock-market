@@ -61,6 +61,7 @@ The architecture is intentionally portfolio-scale and locally runnable, while co
 | Database administration | pgAdmin |
 | Metrics | Prometheus + `prometheus_client` |
 | Dashboards | Grafana |
+| Business intelligence | Microsoft Power BI Desktop |
 | Containers | Docker / Docker Compose |
 | Runtime | Spark 3.5.1, Confluent Platform 7.5.0 |
 
@@ -234,12 +235,79 @@ Prometheus scrapes metrics every 15 seconds. Grafana provides the operational da
 
 The final dashboard includes producer activity, API/Kafka errors, uptime, Kafka topic offset, latest stock prices, price trends, PostgreSQL connections and Spark CPU usage.
 
-![Grafana Real-Time Stock Market Monitoring dashboard](screenshots/grafana-dashboard.jpeg)
+![Grafana Real-Time Stock Market Monitoring dashboard](screenshots/grafana dashboard.jpeg)
 
 One Kafka monitoring panel uses:
 
 ```promql
 kafka_topic_partition_current_offset{topic="stock_ticks"}
+```
+
+## Power BI — Business Intelligence Dashboard
+
+Power BI Desktop was added as the business-intelligence and reporting layer on top of the PostgreSQL data produced by the streaming pipeline.
+
+The architecture keeps operational observability and business analytics separate:
+
+```text
+Streaming / Operational Path:
+Producer -> Kafka -> Spark -> PostgreSQL
+                    |
+                    +-> Prometheus -> Grafana
+
+Business Analytics Path:
+PostgreSQL -> Power BI Desktop
+```
+
+Power BI connects to the PostgreSQL database and consumes the two analytics-facing tables:
+
+- `public.stock_ticks` — raw market observations containing `event_time`, `price`, `reported_volume`, `source` and `symbol`.
+- `public.stock_analytics` — Spark-produced one-minute analytical output containing `window_start`, `window_end`, `avg_price`, `min_price`, `max_price`, `latest_reported_volume` and `symbol`.
+
+### Dashboard measures
+
+The dashboard includes DAX measures for:
+
+- Latest Stock Price
+- Latest AAPL Price
+- Latest MSFT Price
+- Latest TSLA Price
+- Total Observations
+- Latest Observation Time
+
+The measures are used to create KPI cards for current observed prices, total raw observations and data freshness.
+
+### Dashboard visuals
+
+The captured Power BI dashboard includes:
+
+- AAPL latest observed price KPI
+- MSFT latest observed price KPI
+- TSLA latest observed price KPI
+- Total Observations KPI
+- Latest Observation timestamp card
+- Stock Price Trend using `event_time`, `price` and `symbol` from `public.stock_ticks`
+- One-Minute Average Price using `window_start`, `avg_price` and `symbol` from `public.stock_analytics`
+
+The screenshot below records the dashboard state at the time of capture, with 827 observations and the displayed latest observed prices for AAPL, MSFT and TSLA.
+
+![Power BI Stock Market Intelligence Dashboard](screenshots/PowerBI_Dashboard.png)
+
+### Power BI design decision
+
+Power BI is used for business analysis and presentation rather than for the core streaming transformation logic. The principal streaming transformations are completed upstream in Spark, and PostgreSQL provides the durable analytical data consumed by the BI layer.
+
+This separation keeps the architecture clear:
+
+```text
+Kafka + Spark
+    -> streaming ingestion and transformation
+
+PostgreSQL
+    -> durable analytical storage
+
+Power BI
+    -> business analysis and visualization
 ```
 
 ## Reliability and failure handling
@@ -279,7 +347,7 @@ real-time-stock-market/
 │   └── prometheus.yml
 └── screenshots/
     ├── Pipeline_Dataflow_Architecture.png
-    ├── grafana-dashboard.jpeg
+    ├── grafana dashboard.jpeg
     ├── kafka-ui-stock-ticks.png
     ├── postgres-stock-ticks.png
     └── postgres-stock-analytics.png
